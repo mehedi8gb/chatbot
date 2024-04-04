@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YAML Handler Example</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://kit.fontawesome.com/a0d9262eb8.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.0.0/js-yaml.min.js"></script>
+    <!-- Add this script tag to your HTML file -->
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+  </head>
+  <body>
+    <div id="chatbotApp" class="chatbot-container fixed bottom-0 right-0 z-50">
+      <div class="flex flex-center">
+        {{ selectedQuestion }}
+        <button
+          class="button"
+          @click="console.log(findQuestionByPath('1.route.options.0.questions.1.question'))"
+        >
+          Toggle Chatbot
+        </button>
+      </div>
+      <div class="flex flex-center">
+        {{ selectedPath }}
+        <button
+          class="button"
+          @click="console.log(getPath(questions, 'Would you like to know more about our delivery services?'))"
+        >
+          Toggle Path
+        </button>
+      </div>
+      <!-- <div
+        class="chatbot-icon fixed bottom-4 right-4 z-50"
+        @click="toggleChatbot"
+      >
+        <i class="fa fa-comment text-black fa-3x"></i>
+      </div> -->
+      <div v-show="isChatbotOpen">
+        <div
+          class="overflow-y-auto fixed bottom-20 right-4 z-50"
+          style="height: 700px; width: 405px"
+        >
+          <div
+            class="max-w-lg mx-auto chatbot-frame bg-white rounded-lg shadow-md relative"
+          >
+            <!-- Header Section -->
+            <div
+              class="flex justify-center items-center py-4 bg-blue-200 sticky top-0 z-10"
+            >
+              <img
+                src="https://staging.backoffice2.daynightprint.co.uk/resource/image/dnp-icon.png"
+                alt="Chatbot Icon"
+                class="h-10 w-10 mr-2"
+              />
+              <img
+                src="https://www.daynightprint.co.uk/wp-content/uploads/2019/03/daynight-logo.png"
+                alt="Service Logo"
+                class="h-5 w-auto"
+              />
+              <button
+                @click="resetSessionQuestions"
+                class="absolute top-0 right-0 p-4"
+              >
+                reset
+              </button>
+            </div>
+            <div class="flex flex-col flex-1 overflow-y-auto">
+              <!-- Chat Message block system -->
+              <div class="flex flex-row items-start justify-start my-2">
+                <div
+                  class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 mr-2 relative"
+                >
+                  <img
+                    src="https://staging.backoffice2.daynightprint.co.uk/resource/image/dnp-icon.png"
+                    alt="Icon"
+                    class="h-full w-full object-cover rounded-full"
+                  />
+                </div>
+
+                <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                  <template>
+                    <div
+                      v-for="(question, index) in questions"
+                      :key="index"
+                      class="chat-message"
+                    >
+                      <button
+                        @click="selectQuestion(question)"
+                        class="w-full text-left text-gray-700 px-4 py-3 border-b hover:bg-gray-50"
+                      >
+                        {{ question.question }}
+                      </button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Chat Message block user-->
+
+              <template v-for="(question, index) in sessionQuestions">
+                <div class="flex flex-row items-end justify-end my-2 ml-2">
+                  <!-- User side -->
+                  <div
+                    class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg"
+                  >
+                    <div class="text-sm">{{ question }}</div>
+                  </div>
+                  <div
+                    class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 ml-2"
+                  ></div>
+                </div>
+                <div class="flex flex-row items-start justify-start my-2">
+                  <template v-if="sessionAnswers[index]">
+                    <!-- System side -->
+                    <div
+                      class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 mr-2 relative"
+                    >
+                      <img
+                        src="https://staging.backoffice2.daynightprint.co.uk/resource/image/dnp-icon.png"
+                        alt="Icon"
+                        class="h-full w-full object-cover rounded-full"
+                      />
+                    </div>
+                    <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                      <template v-if="sessionAnswers[index].answer">
+                        <div class="chat-message p-4">
+                          {{ sessionAnswers[index].answer }}
+                        </div>
+                      </template>
+                      <template v-if="sessionAnswers[index].link">
+                        <div class="chat-message p-4">
+                          <a
+                            :href="sessionAnswers[index].link"
+                            target="_blank"
+                            class="text-blue-500 hover:underline"
+                            >Click here for more info</a
+                          >
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+                <template v-if="sessionAnswers[index].options">
+                  <div class="flex flex-row items-start justify-start my-2">
+                    <!-- System side -->
+                    <div
+                      class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 mr-2 relative"
+                    >
+                      <img
+                        src="https://staging.backoffice2.daynightprint.co.uk/resource/image/dnp-icon.png"
+                        alt="Icon"
+                        class="h-full w-full object-cover rounded-full"
+                      />
+                    </div>
+                    <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                      <div class="px-4 py-2">
+                        select any option <i class="fa-solid fa-arrow-down"></i>
+                      </div>
+                      <div
+                        v-for="(option, i) in sessionAnswers[index].options"
+                        :key="i"
+                        class="chat-message"
+                      >
+                        <button
+                          @click="handleOptionClick(option, i)"
+                          class="w-full text-left text-gray-700 px-4 py-3 border-b hover:bg-gray-50"
+                        >
+                          {{ option.option }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </template>
+            </div>
+          </div>
+          <!-- role up button  -->
+          <div
+            class="flex justify-center items-center py-4 sticky bottom-2 z-10"
+          >
+            <button
+              @click="roleUp"
+              class="inline-flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-md transition duration-500 ease-in-out transform hover:scale-105"
+            >
+              <svg
+                class="h-6 w-6 mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                ></path>
+              </svg>
+              Back
+            </button>
+          </div>
+
+          <!-- Chat Messages End -->
+
+          <!-- Input Box Start -->
+          <div
+            class="bg-gray-300 p-4 absolute bottom-0 left-0 right-0 sticky z-10 input-box-container"
+          >
+            <label>
+              <input
+                class="flex items-center h-10 w-full rounded px-3 text-sm"
+                type="text"
+                placeholder="Type your message..."
+              />
+            </label>
+          </div>
+          <!-- Input Box End -->
+          <div ref="bottom"></div>
+        </div>
+      </div>
+    </div>
+    <script src="vue.js"></script>
+  </body>
+</html>
